@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="labelme/icons/icon.png"><br/>labelme
+  <img src="labelme/icons/icon.png"><br/>labelme<br/>(with rotate rectangle)
 </h1>
 
 <h4 align="center">
@@ -24,7 +24,7 @@
 <br/>
 
 <div align="center">
-  <img src="examples/instance_segmentation/.readme/annotation.jpg" width="70%">
+  <img src="examples/instance_segmentation/.readme/annotation.png" width="70%">
 </div>
 
 ## Description

@@ -126,10 +126,25 @@ class Shape(object):
     def setOpen(self):
         self._closed = False
 
-    def getRectFromLine(self, pt1, pt2):
-        x1, y1 = pt1.x(), pt1.y()
-        x2, y2 = pt2.x(), pt2.y()
-        return QtCore.QRectF(x1, y1, x2 - x1, y2 - y1)
+    def getRectFromLine(self):
+        x1, y1 = self.points[0].x(), self.points[0].y()
+        x2, y2 = self.points[1].x(), self.points[1].y()
+        if len(self.points) == 2:
+            self.points.append(QtCore.QPointF(x2 , y1)) 
+            dx = x2 - x1 
+            dy = y2 - y1 
+            self.points.append(QtCore.QPointF(dx , dy))
+        else:
+            dx ,dy = self.points[3].x(), self.points[3].y()
+        
+        x3 , y3 = self.points[2].x(), self.points[2].y()
+        theta = math.atan2(y3-y1 , x3-x1)
+        x_draft ,y_draft = dy * math.sin(theta) , dy * math.cos(theta)
+        corner_0  =  QtCore.QPointF(x1, y1)
+        corner_1  =  QtCore.QPointF(x3, y3)
+        corner_2  =  QtCore.QPointF(x2, y2)
+        corner_3  =  QtCore.QPointF(x1-x_draft, y1 +y_draft )
+        return [corner_0 , corner_1 , corner_2 , corner_3 , corner_0]
 
     def paint(self, painter):
         if self.points:
@@ -145,11 +160,15 @@ class Shape(object):
             vrtx_path = QtGui.QPainterPath()
 
             if self.shape_type == "rectangle":
-                assert len(self.points) in [1, 2]
-                if len(self.points) == 2:
-                    rectangle = self.getRectFromLine(*self.points)
-                    line_path.addRect(rectangle)
-                for i in range(len(self.points)):
+                assert len(self.points) in [1, 2 , 4]
+                if len(self.points) in [2 ,4]:
+                    rectangle = self.getRectFromLine()
+                    # line_path.addRect(rectangle)
+                    line_path.moveTo(rectangle[0])
+                    for p in rectangle[1:]:
+                        line_path.lineTo(p)
+
+                for i in range(len(self.points[:3])):
                     self.drawVertex(vrtx_path, i)
             elif self.shape_type == "circle":
                 assert len(self.points) in [1, 2]
@@ -201,7 +220,7 @@ class Shape(object):
         if shape == self.P_SQUARE:
             path.addRect(point.x() - d / 2, point.y() - d / 2, d, d)
         elif shape == self.P_ROUND:
-            path.addEllipse(point, d / 2.0, d / 2.0)
+            path.addEllipse(point, d / 4.0, d / 4.0)
         else:
             assert False, "unsupported vertex shape"
 
@@ -242,9 +261,12 @@ class Shape(object):
     def makePath(self):
         if self.shape_type == "rectangle":
             path = QtGui.QPainterPath()
-            if len(self.points) == 2:
-                rectangle = self.getRectFromLine(*self.points)
-                path.addRect(rectangle)
+            if len(self.points) in [2,4]:
+                rectangle = self.getRectFromLine()
+                # path.addRect(rectangle)
+                path.moveTo(rectangle[0])
+                for p in rectangle[1:]:
+                    path.lineTo(p)
         elif self.shape_type == "circle":
             path = QtGui.QPainterPath()
             if len(self.points) == 2:
@@ -260,7 +282,7 @@ class Shape(object):
         return self.makePath().boundingRect()
 
     def moveBy(self, offset):
-        self.points = [p + offset for p in self.points]
+        self.points[:3] = [p + offset for p in self.points[:3]]
 
     def moveVertexBy(self, i, offset):
         self.points[i] = self.points[i] + offset

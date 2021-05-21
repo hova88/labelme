@@ -5,7 +5,7 @@ from qtpy import QtWidgets
 from labelme import QT5
 from labelme.shape import Shape
 import labelme.utils
-
+import math
 
 # TODO(unknown):
 # - [maybe] Find optimal epsilon value.
@@ -249,8 +249,13 @@ class Canvas(QtWidgets.QWidget):
 
         # Polygon/Vertex moving.
         if QtCore.Qt.LeftButton & ev.buttons():
-            if self.selectedVertex():
+            if self.selectedVertex() and self.hVertex == 1:
                 self.boundedMoveVertex(pos)
+                self.repaint()
+                self.movingShape = True
+            if self.selectedVertex() and self.hVertex == 2:
+                self.overrideCursor(CURSOR_MOVE)
+                self.boundedRotateVertex(pos)
                 self.repaint()
                 self.movingShape = True
             elif self.selectedShapes and self.prevPoint:
@@ -492,6 +497,32 @@ class Canvas(QtWidgets.QWidget):
         if self.outOfPixmap(pos):
             pos = self.intersectionPoint(point, pos)
         shape.moveVertexBy(index, pos - point)
+        o = shape.points[2] - shape.points[0]
+        theta = math.atan2(o.y() ,o.x())
+        sin , cos = math.sin(theta) , math.cos(theta)
+        if index == 1 and theta != 0.0:
+            x1,y1 = shape.points[0].x() , shape.points[0].y()
+            xp,yp = pos.x() , pos.y()
+            y = y1 + sin**2 * (yp -y1) + sin*cos*(xp-x1)
+            x = xp + sin/cos *(yp - y)
+            shape.points[2] = QtCore.QPointF(x , y)   
+            dx,dy = (y-y1) / (sin+1e-7) , (x - xp)/(sin+1e-7)
+            shape.points[3] = QtCore.QPointF(dx , dy)   
+        elif index == 1 and theta == 0:
+             shape.moveVertexBy(3, pos-point) 
+             shape.points[2] = QtCore.QPointF(shape.points[2].x()+ (pos - point).x() ,shape.points[2].y() )
+
+    def rotz(self ,point , theta):
+        O = point - self.hShape.points[0]
+        x = O.x() * math.cos(theta)  - O.y() * math.sin(theta) + self.hShape.points[0].x()
+        y = O.x() * math.sin(theta)  + O.y() * math.cos(theta) + self.hShape.points[0].y()
+        return QtCore.QPointF(x ,y)
+
+    def boundedRotateVertex(self, pos):
+        shape = self.hShape
+        theta = math.atan((pos.y() -shape.points[2].y()) / shape.points[3].y())  /20
+        shape.points[1] = self.rotz(shape.points[1] ,theta )
+        shape.points[2] = self.rotz(shape.points[2] ,theta )
 
     def boundedMoveShapes(self, shapes, pos):
         if self.outOfPixmap(pos):
